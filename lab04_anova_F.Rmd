@@ -1,0 +1,101 @@
+---
+title: "Lab04 - F tests for ANOVA"
+output: pdf_document
+---
+
+## Goals
+
+The goal in this lab is to practice F tests for ANOVA
+
+## Loading packages
+
+Here are some packages with functionality you may need for this lab.  Run this code chunk now.
+
+```{r}
+library(readr)
+library(ggplot2)
+library(gridExtra)
+library(mosaic)
+library(dplyr)
+
+options("pillar.sigfig" = 10) # print 10 significant digits in summarize output
+```
+
+A study was conducted to examine the effectiveness of four different hand-washing methods for eliminating bacteria
+
+```{r}
+soap <- read_csv("http://www.evanlray.com/data/sdm4/Bacterial_Soap.csv")
+names(soap) <- c("bacterial_counts", "method")
+
+soap %>%
+  count(method)
+```
+
+#### 1. Make an appropriate plot of the data.
+
+```{r}
+ggplot(data = soap, mapping = aes(x = method, y = bacterial_counts)) +
+  geom_boxplot()
+
+ggplot(data = soap, mapping = aes(x = bacterial_counts, color = method)) +
+  geom_density()
+
+ggplot(data = soap, mapping = aes(x = bacterial_counts)) +
+  geom_histogram(bins = 20) +
+  facet_wrap( ~ method, ncol = 1)
+```
+
+#### 2. Conduct a test of the claim that all four methods are equally effective.
+
+Define the parameters
+
+$\mu_1$ = mean bacterial count when using alcohol spray
+
+$\mu_2$ = mean bacterial count when using antibacterial soap
+
+$\mu_3$ = mean bacterial count when using soap
+
+$\mu_4$ = mean bacterial count when using water
+
+Our hypotheses are:
+
+$H_0: \mu_1 = \mu_2 = \mu_3 = \mu_4$  The average bacterial count is the same for all four handwashing methods.
+
+$H_A:$ Not all of $\mu_1$, $\mu_2$, $\mu_3$, and $\mu_4$ are equal to teach other.  The average bacterial count is different for at least one of the handwashing methods.
+
+```{r}
+fit_full <- lm(bacterial_counts ~ method, data = soap)
+anova(fit_full)
+```
+
+The p-value for this test is 0.001111.  The data provide very strong evidence that the mean bacterial counts are not equal for the four handwashing methods.
+
+#### 3. Conduct a test of the claim that the "Antibacterial Soap", "Soap", and "Water" methods are equally effective.
+
+```{r}
+soap <- soap %>%
+  mutate(
+    not_alcohol_spray = ifelse(method %in% c("Antibacterial Soap", "Soap", "Water"), "Not Alcohol", "Alcohol")
+  )
+fit_reduced <- lm(bacterial_counts ~ not_alcohol_spray, data = soap)
+anova(fit_reduced, fit_full)
+```
+
+In terms of the parameters defined in the answer to part 2, we are testing the following hypotheses:
+
+$H_0: \mu_2 = \mu_3 = \mu_4$  The mean bacterial count is the same for each of the antibacterial soap, soap, and water methods.
+
+$H_A:$ At least one of $\mu_2$, $\mu_3$, and $\mu_4$ is different from the other two.  The mean bacterial count is not the same for all three of these methods.
+
+The p-value for the test is 0.436.  The data do not provide strong evidence that there is a difference in mean bacterial counts.
+
+#### 4. (Optional) If you have extra time and want a refresher, calculate the mean and standard deviation of observations in each group
+
+```{r}
+soap %>%
+  group_by(method) %>%
+  summarize(
+    mean_bacteria = mean(bacterial_counts),
+    sd_bacteria = sd(bacterial_counts)
+  )
+```
